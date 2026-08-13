@@ -23,3 +23,14 @@ class LogEventOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class RiskEventOut(BaseModel):
+    id: int
+    rule_triggered: str
+    severity: str
+    source_ip: str
+    description: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

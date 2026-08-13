@@ -4,9 +4,10 @@ import pandas as pd
 import io
 
 from database import Base, engine, get_db
-from models import User, LogEvent
-from schemas import UserCreate, UserLogin, Token, LogEventOut
+from models import User, LogEvent, RiskEvent
+from schemas import UserCreate, UserLogin, Token, LogEventOut, RiskEventOut
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_admin
+from detection import run_brute_force_detection
 
 Base.metadata.create_all(bind=engine)
 
@@ -81,3 +82,19 @@ async def upload_logs(
 
     db.commit()
     return {"message": f"{count} log events uploaded successfully"}
+
+@app.post("/run-detection")
+def run_detection(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    new_events = run_brute_force_detection(db)
+    return {"message": f"{len(new_events)} new risk event(s) detected"}
+
+
+@app.get("/risk-events", response_model=list[RiskEventOut])
+def get_risk_events(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return db.query(RiskEvent).all()
