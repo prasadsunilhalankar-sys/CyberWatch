@@ -3,7 +3,7 @@ from sqlalchemy import func
 from datetime import timedelta
 from collections import defaultdict
 
-from models import LogEvent, RiskEvent
+from models import LogEvent, RiskEvent, Alert
 
 FAILED_LOGIN_THRESHOLD = 5
 TIME_WINDOW_MINUTES = 5
@@ -49,7 +49,14 @@ def run_brute_force_detection(db: Session):
                         description=f"{count_in_window} failed login attempts from {ip} within {TIME_WINDOW_MINUTES} minutes"
                     )
                     db.add(risk)
+                    db.flush()
                     new_risk_events.append(risk)
+
+                    alert = Alert(
+                        risk_event_id=risk.id,
+                        message=f"New High severity alert: {risk.description}"
+                    )
+                    db.add(alert)
                 break
 
     db.commit()

@@ -34,3 +34,13 @@ class RiskEventOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AlertOut(BaseModel):
+    id: int
+    risk_event_id: int
+    message: str
+    is_read: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

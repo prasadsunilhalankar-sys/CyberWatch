@@ -2,17 +2,25 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 import pandas as pd
 import io
-
+from fastapi.responses import StreamingResponse
 from database import Base, engine, get_db
-from models import User, LogEvent, RiskEvent
-from schemas import UserCreate, UserLogin, Token, LogEventOut, RiskEventOut
+from models import User, LogEvent, RiskEvent, Alert
+from schemas import UserCreate, UserLogin, Token, LogEventOut, RiskEventOut, AlertOut
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_admin
 from detection import run_brute_force_detection
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5174", "http://127.0.0.1:5174"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def read_root():
@@ -98,3 +106,53 @@ def get_risk_events(
     db: Session = Depends(get_db)
 ):
     return db.query(RiskEvent).all()
+
+@app.get("/alerts", response_model=list[AlertOut])
+def get_alerts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return db.query(Alert).filter(Alert.is_read == 0).order_by(Alert.created_at.desc()).all()
+
+
+@app.post("/alerts/{alert_id}/mark-read")
+def mark_alert_read(
+    alert_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    alert.is_read = 1
+    db.commit()
+    return {"message": "Alert marked as read"}
+
+@app.get("/export/csv")
+def export_csv(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    events = db.query(RiskEvent).all()
+
+    data = [{
+        "ID": e.id,
+        "Rule Triggered": e.rule_triggered,
+        "Severity": e.severity,
+        "Source IP": e.source_ip,
+        "Description": e.description,
+        "Created At": e.created_at
+    } for e in events]
+
+    df = pd.DataFrame(data)
+
+    stream = io.StringIO()
+    df.to_csv(stream, index=False)
+
+    response = StreamingResponse(
+        iter([stream.getvalue()]),
+        media_type="text/csv"
+    )
+    response.headers["Content-Disposition"] = "attachment; filename=risk_events_report.csv"
+    return response
