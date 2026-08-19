@@ -28,6 +28,21 @@ function Dashboard() {
     navigate("/");
   };
 
+    const handleExportCSV = async () => {
+    try {
+      const response = await api.get("/export/csv", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "risk_events_report.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setError("Could not export CSV");
+    }
+  };
+
     const dismissAlert = async (alertId) => {
     try {
       await api.post(`/alerts/${alertId}/mark-read`);
@@ -43,9 +58,12 @@ function Dashboard() {
     <div style={{ maxWidth: "900px", margin: "40px auto", fontFamily: "sans-serif" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h2>CyberWatch Dashboard</h2>
-        <div>
+               <div>
           <button onClick={() => navigate("/upload")} style={{ marginRight: "10px" }}>
             Upload Logs
+          </button>
+          <button onClick={handleExportCSV} style={{ marginRight: "10px" }}>
+            Export CSV
           </button>
           <button onClick={handleLogout}>Logout</button>
         </div>
