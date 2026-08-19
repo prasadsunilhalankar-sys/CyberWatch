@@ -4,14 +4,18 @@ import api from "../api";
 
 function Dashboard() {
   const [riskEvents, setRiskEvents] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get("/risk-events");
-        setRiskEvents(response.data);
+        const riskResponse = await api.get("/risk-events");
+        setRiskEvents(riskResponse.data);
+
+        const alertResponse = await api.get("/alerts");
+        setAlerts(alertResponse.data);
       } catch (err) {
         setError("Could not load risk events. Please login again.");
       }
@@ -22,6 +26,15 @@ function Dashboard() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
+  };
+
+    const dismissAlert = async (alertId) => {
+    try {
+      await api.post(`/alerts/${alertId}/mark-read`);
+      setAlerts(alerts.filter((a) => a.id !== alertId));
+    } catch (err) {
+      console.error("Could not dismiss alert");
+    }
   };
 
   const highCount = riskEvents.filter((e) => e.severity === "High").length;
@@ -37,6 +50,30 @@ function Dashboard() {
           <button onClick={handleLogout}>Logout</button>
         </div>
       </div>
+
+            {alerts.length > 0 && (
+        <div style={{ margin: "16px 0" }}>
+          {alerts.map((alert) => (
+            <div
+              key={alert.id}
+              style={{
+                backgroundColor: "#fff3cd",
+                color: "#664d03",
+                border: "1px solid #ffe69c",
+                borderRadius: "6px",
+                padding: "10px 14px",
+                marginBottom: "8px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span>⚠ {alert.message}</span>
+              <button onClick={() => dismissAlert(alert.id)}>Dismiss</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: "16px", margin: "20px 0" }}>
         <div style={{ border: "1px solid #ccc", padding: "16px", borderRadius: "6px" }}>
