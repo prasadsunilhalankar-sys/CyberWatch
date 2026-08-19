@@ -28,9 +28,14 @@ function Dashboard() {
 
   return (
     <div style={{ maxWidth: "900px", margin: "40px auto", fontFamily: "sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h2>CyberWatch Dashboard</h2>
-        <button onClick={handleLogout}>Logout</button>
+        <div>
+          <button onClick={() => navigate("/upload")} style={{ marginRight: "10px" }}>
+            Upload Logs
+          </button>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: "16px", margin: "20px 0" }}>
