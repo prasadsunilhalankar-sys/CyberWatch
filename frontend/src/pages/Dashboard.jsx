@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import Layout from "../components/Layout";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 function Dashboard() {
   const [riskEvents, setRiskEvents] = useState([]);
@@ -23,12 +25,7 @@ function Dashboard() {
     fetchData();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/");
-  };
-
-    const handleExportCSV = async () => {
+  const handleExportCSV = async () => {
     try {
       const response = await api.get("/export/csv", { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -43,7 +40,7 @@ function Dashboard() {
     }
   };
 
-    const dismissAlert = async (alertId) => {
+  const dismissAlert = async (alertId) => {
     try {
       await api.post(`/alerts/${alertId}/mark-read`);
       setAlerts(alerts.filter((a) => a.id !== alertId));
@@ -53,23 +50,30 @@ function Dashboard() {
   };
 
   const highCount = riskEvents.filter((e) => e.severity === "High").length;
+  const uniqueIPs = new Set(riskEvents.map((e) => e.source_ip)).size;
+
+  const chartData = riskEvents.map((e) => ({
+    ip: e.source_ip,
+    count: 1,
+  }));
 
   return (
-       <div style={{ maxWidth: "1100px", margin: "40px auto", padding: "0 24px", fontFamily: "'Segoe UI', sans-serif" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2>CyberWatch Dashboard</h2>
-               <div>
-          <button onClick={() => navigate("/upload")} style={{ marginRight: "10px" }}>
-            Upload Logs
-          </button>
-          <button onClick={handleExportCSV} style={{ marginRight: "10px" }}>
-            Export CSV
-          </button>
-          <button onClick={handleLogout}>Logout</button>
-        </div>
+    <Layout>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+        <h2 style={{ color: "#fff", margin: 0 }}>Dashboard</h2>
+        <button onClick={handleExportCSV} style={{
+          padding: "8px 18px",
+          background: "#2563eb",
+          color: "#fff",
+          border: "none",
+          borderRadius: "6px",
+          cursor: "pointer"
+        }}>
+          Export CSV
+        </button>
       </div>
 
-            {alerts.length > 0 && (
+      {alerts.length > 0 && (
         <div style={{ margin: "16px 0" }}>
           {alerts.map((alert) => (
             <div
@@ -93,7 +97,7 @@ function Dashboard() {
         </div>
       )}
 
-          <div style={{ display: "flex", gap: "20px", margin: "24px 0" }}>
+      <div style={{ display: "flex", gap: "20px", margin: "24px 0" }}>
         <div style={{
           flex: 1,
           background: "linear-gradient(135deg, #1e3a5f, #16213e)",
@@ -114,11 +118,21 @@ function Dashboard() {
           <p style={{ margin: 0, color: "#c98f8f", fontSize: "14px" }}>High Severity</p>
           <h3 style={{ margin: "8px 0 0", fontSize: "32px", color: "#fff" }}>{highCount}</h3>
         </div>
+        <div style={{
+          flex: 1,
+          background: "linear-gradient(135deg, #1e4a3f, #163e2e)",
+          padding: "20px 24px",
+          borderRadius: "10px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+        }}>
+          <p style={{ margin: 0, color: "#8fc9a8", fontSize: "14px" }}>Unique Source IPs</p>
+          <h3 style={{ margin: "8px 0 0", fontSize: "32px", color: "#fff" }}>{uniqueIPs}</h3>
+        </div>
       </div>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-           <table style={{
+      <table style={{
         width: "100%",
         borderCollapse: "collapse",
         borderRadius: "10px",
@@ -157,7 +171,28 @@ function Dashboard() {
           ))}
         </tbody>
       </table>
-    </div>
+
+      <div style={{
+        background: "#1a2332",
+        borderRadius: "10px",
+        padding: "20px 24px",
+        marginTop: "24px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+      }}>
+        <h3 style={{ color: "#fff", marginTop: 0, marginBottom: "16px", fontSize: "16px" }}>
+          Risk Events by Source IP
+        </h3>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#2a3a52" />
+            <XAxis dataKey="ip" stroke="#8fa8c9" fontSize={12} />
+            <YAxis stroke="#8fa8c9" fontSize={12} allowDecimals={false} />
+            <Tooltip contentStyle={{ background: "#1a2332", border: "1px solid #2a3a52", color: "#fff" }} />
+            <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Layout>
   );
 }
 
